@@ -4,6 +4,7 @@ so we need to additnala setup do for establishin the connctions,
 a) need to enable the  Identity-Aware Proxy in gcp , IAP TCP forwarding allows you to establish an encrypted tunnel over which you can forward SSH, RDP, and other traffic to VM instances.
 source ip range is Including 35.235.240.0/20 in the source ranges allows SSH connections using Identity-Aware Proxy (IAP) TCP forwarding if all other prerequisites are met
 
+
 c) creat a firewall for iap-tcp 
 
 give the ipv4 address- 35.235.240.0/20
@@ -15,5 +16,12 @@ d) create cloud nat-gateway:
       create the cloud router ( for cloud nat gatewa)
 
 e) try to ping to the vm for netwrok connections 
+\\
+
+refenese link:
+https://medium.com/@nanditasahu031/gcp-cloud-basic-networking-ff66aa7f0e5b
+
+https://medium.com/@aman.9kaushik/virtual-private-cloud-vpc-in-google-cloud-62f67cb70489
+
 
 
