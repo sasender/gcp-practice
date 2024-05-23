@@ -1,0 +1,95 @@
+gke_pods are not access to gcs by default in google cloud, need to do some additinal configuration has needed
+step: [ creation work-load-identity ] in gcp iam dashboard or cli 
+1) gcloud container clusters update dev-gke-ckuster \
+    --zone=us-central1-c  \
+    --workload-pool=dev-test-398107.svc.id.goog   --->> update the workload-identity
+
+2) after upgrading the workload identity on cluster, do the service-account creation 
+  gcloud iam service-accounts create access-gcs \
+    --project=dev-test-398107
+
+3) attaach the service-account to role by using policy_bindings
+
+gcloud projects add-iam-policy-binding dev-test-398107 \
+    --member "serviceAccount:access-gcs@dev-test-398107.iam.gserviceaccount.com" \
+    --role "roles/storage.admin"
+
+4) get the cluster details :
+
+gcloud container clusters get-credentials dev-gke-ckuster --zone us-central1-c --project dev-test-398107
+
+5) create a kubenrnets-service-account 
+
+kubectl create namespace app
+
+kubectl create serviceaccount gcs-access-ksa \
+    --namespace app
+
+6) allow the kubernets service account to iam service account by using iam policy binding 
+ This binding allows the Kubernetes service account to act as the IAM service account.
+
+gcloud iam service-accounts add-iam-policy-binding access-gcs@dev-test-398107.iam.gserviceaccount.com \
+    --role roles/iam.workloadIdentityUser \
+    --member "serviceAccount:dev-test-398107.svc.id.goog[app/gcs-access-ksa]"
+
+
+7)  Annotate the Kubernetes service account with the email address of the IAM service account.
+
+kubectl annotate serviceaccount gcs-access-ksa \
+    --namespace app \
+    iam.gke.io/gcp-service-account=access-gcs@dev-test-398107.iam.gserviceaccount.com
+
+
+######################################
+
+cheching the gcs from gke
+
+-------------------------
+
+
+gcloud storage buckets create gs://workload-identity-test
+# create few files 
+touch file1.txt file2.txt file3.txt
+#Upload files to bucket 
+gsutil cp file1.txt file2.txt file3.txt gs://workload-identity-test
+# check if files are uploaded or not
+gsutil ls gs://workload-identity-test
+
+
+######################################
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: game-2048
+  name: workload-identity-test
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: app-2048
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: app-2048
+    spec:
+      containers:
+      - image: google/cloud-sdk:slim
+        command: ["sleep","infinity"]
+        imagePullPolicy: Always
+        name: workload-identity-test
+        ports:
+        - containerPort: 80
+________________________________________________________
+
+
+kubectl -n app  exec  workload-identity-test -- gsutil ls gs://workload-identity-test
+
+
+
+https://medium.com/google-cloud/workload-identity-secured-way-to-access-google-cloud-apis-from-gke-workloads-44882ec5036a
+curl -H "Metadata-Flavor: Google" http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/email
+
+
+
+
